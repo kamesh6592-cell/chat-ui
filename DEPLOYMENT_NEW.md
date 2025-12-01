@@ -26,13 +26,15 @@ The Chat-UI repository has been successfully imported and is ready for deploymen
    MONGODB_URL=mongodb+srv://username:password@cluster.mongodb.net/chat-ui?retryWrites=true&w=majority
    OPENAI_BASE_URL=https://router.huggingface.co/v1
    OPENAI_API_KEY=hf_your_token_here
+   PUBLIC_APP_ASSETS=chatui
    ```
 
-   **Optional but recommended:**
+   **Recommended for proper functionality:**
    ```
    PUBLIC_ORIGIN=https://your-app-name.vercel.app
-   MONGODB_DB_NAME=chat-ui
    PUBLIC_APP_NAME=My Chat UI
+   PUBLIC_APP_DESCRIPTION=AI Chat Interface
+   MONGODB_DB_NAME=chat-ui
    ```
 
 4. **Deploy**: Click "Deploy" - Vercel will handle the rest!
@@ -69,7 +71,9 @@ Copy `.env.example` to `.env.local` and configure:
 | `MONGODB_URL` | MongoDB connection string | `mongodb+srv://...` |
 | `OPENAI_BASE_URL` | AI API endpoint | `https://router.huggingface.co/v1` |
 | `OPENAI_API_KEY` | AI API key | `hf_...` or `sk-...` |
+| `PUBLIC_APP_ASSETS` | Asset folder name | `chatui` |
 | `PUBLIC_ORIGIN` | Your app's URL | `https://my-chat.vercel.app` |
+| `PUBLIC_APP_NAME` | Your app name | `My Chat UI` |
 
 ## 🔧 Troubleshooting
 
@@ -93,6 +97,21 @@ Copy `.env.example` to `.env.local` and configure:
 **Problem**: Missing required API keys
 
 **Solution**: Ensure both `MONGODB_URL` and `OPENAI_API_KEY` are set
+
+### Assets not loading (404 errors for logo.svg, favicon, etc.)
+
+**Problem**: Missing `PUBLIC_APP_ASSETS` environment variable
+
+**Solution**: Add `PUBLIC_APP_ASSETS=chatui` in Vercel environment variables
+
+### "An error occurred" when sending messages
+
+**Problem**: Missing AI API configuration or invalid API keys
+
+**Solution**: 
+1. Verify `OPENAI_BASE_URL` and `OPENAI_API_KEY` are set correctly
+2. For Hugging Face: Get token from [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
+3. Check Vercel function logs for specific error messages
 
 ---
 
