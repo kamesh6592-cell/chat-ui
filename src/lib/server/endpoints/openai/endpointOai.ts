@@ -101,8 +101,11 @@ export async function endpointOai(
 		return response;
 	};
 
+	// Use rotating API key if available
+	const effectiveApiKey = apiKey || config.getRotatingApiKey() || "sk-";
+
 	const openai = new OpenAI({
-		apiKey: apiKey || "sk-",
+		apiKey: effectiveApiKey,
 		baseURL,
 		defaultHeaders: {
 			...(config.PUBLIC_APP_NAME === "HuggingChat" && { "User-Agent": "huggingchat" }),
@@ -214,41 +217,59 @@ export async function endpointOai(
 
 			// Handle both streaming and non-streaming responses with appropriate processors
 			if (streamingSupported) {
-				const openChatAICompletion = await openai.chat.completions.create(
-					body as ChatCompletionCreateParamsStreaming,
-					{
-						body: { ...body, ...extraBody },
-						headers: {
-							"ChatUI-Conversation-ID": conversationId?.toString() ?? "",
-							"X-use-cache": "false",
-							...(locals?.token ? { Authorization: `Bearer ${locals.token}` } : {}),
-							// Bill to organization if configured (HuggingChat only)
-							...(config.isHuggingChat && locals?.billingOrganization
-								? { "X-HF-Bill-To": locals.billingOrganization }
-								: {}),
-						},
-						signal: abortSignal,
+				try {
+					const openChatAICompletion = await openai.chat.completions.create(
+						body as ChatCompletionCreateParamsStreaming,
+						{
+							body: { ...body, ...extraBody },
+							headers: {
+								"ChatUI-Conversation-ID": conversationId?.toString() ?? "",
+								"X-use-cache": "false",
+								...(locals?.token ? { Authorization: `Bearer ${locals.token}` } : {}),
+								// Bill to organization if configured (HuggingChat only)
+								...(config.isHuggingChat && locals?.billingOrganization
+									? { "X-HF-Bill-To": locals.billingOrganization }
+									: {}),
+							},
+							signal: abortSignal,
+						}
+					);
+					return openAIChatToTextGenerationStream(openChatAICompletion, () => routerMetadata);
+				} catch (error) {
+					// Check if it's a rate limit and rotate key
+					const { KeyRotationManager } = await import("$lib/server/keyRotation");
+					if (KeyRotationManager.isRateLimitError(error)) {
+						KeyRotationManager.markCurrentKeyAsFailed(error);
 					}
-				);
-				return openAIChatToTextGenerationStream(openChatAICompletion, () => routerMetadata);
+					throw error;
+				}
 			} else {
-				const openChatAICompletion = await openai.chat.completions.create(
-					body as ChatCompletionCreateParamsNonStreaming,
-					{
-						body: { ...body, ...extraBody },
-						headers: {
-							"ChatUI-Conversation-ID": conversationId?.toString() ?? "",
-							"X-use-cache": "false",
-							...(locals?.token ? { Authorization: `Bearer ${locals.token}` } : {}),
-							// Bill to organization if configured (HuggingChat only)
-							...(config.isHuggingChat && locals?.billingOrganization
-								? { "X-HF-Bill-To": locals.billingOrganization }
-								: {}),
-						},
-						signal: abortSignal,
+				try {
+					const openChatAICompletion = await openai.chat.completions.create(
+						body as ChatCompletionCreateParamsNonStreaming,
+						{
+							body: { ...body, ...extraBody },
+							headers: {
+								"ChatUI-Conversation-ID": conversationId?.toString() ?? "",
+								"X-use-cache": "false",
+								...(locals?.token ? { Authorization: `Bearer ${locals.token}` } : {}),
+								// Bill to organization if configured (HuggingChat only)
+								...(config.isHuggingChat && locals?.billingOrganization
+									? { "X-HF-Bill-To": locals.billingOrganization }
+									: {}),
+							},
+							signal: abortSignal,
+						}
+					);
+					return openAIChatToTextGenerationSingle(openChatAICompletion, () => routerMetadata);
+				} catch (error) {
+					// Check if it's a rate limit and rotate key
+					const { KeyRotationManager } = await import("$lib/server/keyRotation");
+					if (KeyRotationManager.isRateLimitError(error)) {
+						KeyRotationManager.markCurrentKeyAsFailed(error);
 					}
-				);
-				return openAIChatToTextGenerationSingle(openChatAICompletion, () => routerMetadata);
+					throw error;
+				}
 			}
 		};
 	} else {

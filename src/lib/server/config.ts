@@ -5,6 +5,7 @@ import type { Collection } from "mongodb";
 import type { ConfigKey as ConfigKeyType } from "$lib/types/ConfigKey";
 import type { Semaphore } from "$lib/types/Semaphore";
 import { Semaphores } from "$lib/types/Semaphore";
+import { KeyRotationManager } from "./keyRotation";
 
 export type PublicConfigKey = keyof typeof publicEnv;
 const keysFromEnv = { ...publicEnv, ...serverEnv };
@@ -139,6 +140,15 @@ class ConfigManager {
 		return Object.fromEntries(
 			Object.entries(config).filter(([key]) => publicEnvKeys.includes(key))
 		) as Record<PublicConfigKey, string>;
+	}
+
+	getRotatingApiKey(): string {
+		// Check if using multiple keys setup
+		if (keysFromEnv.HF_KEY_1) {
+			return KeyRotationManager.getCurrentKey();
+		}
+		// Fallback to regular OPENAI_API_KEY or HF_TOKEN
+		return this.get("OPENAI_API_KEY") || this.get("HF_TOKEN") || "";
 	}
 }
 

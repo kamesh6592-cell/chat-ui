@@ -306,15 +306,24 @@ const buildModels = async (): Promise<ProcessedModel[]> => {
 		const baseURL = openaiBaseUrl;
 		logger.info({ baseURL }, "[models] Using OpenAI-compatible base URL");
 
-		// Canonical auth token is OPENAI_API_KEY; keep HF_TOKEN as legacy alias
-		const authToken = config.OPENAI_API_KEY || config.HF_TOKEN;
+		// Use rotating API key system if available, fallback to regular keys
+		const authToken = config.getRotatingApiKey() || config.OPENAI_API_KEY || config.HF_TOKEN;
 
 		// Use auth token from the start if available to avoid rate limiting issues
 		// Some APIs rate-limit unauthenticated requests more aggressively
-		const response = await fetch(`${baseURL}/models`, {
-			headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
-		});
-		logger.info({ status: response.status }, "[models] First fetch status");
+		let response: Response;
+		try {
+			response = await fetch(`${baseURL}/models`, {
+				headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
+			});
+			logger.info({ status: response.status }, "[models] First fetch status");
+		} catch (error) {
+			// Import here to avoid circular dependency
+			const { KeyRotationManager } = await import("./keyRotation");
+			KeyRotationManager.markCurrentKeyAsFailed(error);
+			throw error;
+		}
+
 		if (!response.ok && response.status === 401 && !authToken) {
 			// If we get 401 and didn't have a token, there's nothing we can do
 			throw new Error(
@@ -322,6 +331,12 @@ const buildModels = async (): Promise<ProcessedModel[]> => {
 			);
 		}
 		if (!response.ok) {
+			// Check if it's a rate limit error and rotate key if needed
+			const { KeyRotationManager } = await import("./keyRotation");
+			if (KeyRotationManager.isRateLimitError({ status: response.status })) {
+				KeyRotationManager.markCurrentKeyAsFailed({ status: response.status });
+				logger.warn(`Rate limit detected (${response.status}), key rotated`);
+			}
 			throw new Error(
 				`Failed to fetch ${baseURL}/models: ${response.status} ${response.statusText}`
 			);
