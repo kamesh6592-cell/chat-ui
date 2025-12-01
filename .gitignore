@@ -5,6 +5,7 @@ node_modules
 /package
 .env
 .env.*
+.vercel
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 SECRET_CONFIG
