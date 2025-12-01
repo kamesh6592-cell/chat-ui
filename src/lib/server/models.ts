@@ -307,7 +307,8 @@ const buildModels = async (): Promise<ProcessedModel[]> => {
 		logger.info({ baseURL }, "[models] Using OpenAI-compatible base URL");
 
 		// Use rotating API key system if available, fallback to regular keys
-		const authToken = config.getRotatingApiKey() || config.OPENAI_API_KEY || config.HF_TOKEN;
+		const authToken =
+			(await config.getRotatingApiKey()) || config.OPENAI_API_KEY || config.HF_TOKEN;
 
 		// Use auth token from the start if available to avoid rate limiting issues
 		// Some APIs rate-limit unauthenticated requests more aggressively

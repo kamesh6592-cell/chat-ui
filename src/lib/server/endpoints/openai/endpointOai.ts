@@ -102,7 +102,7 @@ export async function endpointOai(
 	};
 
 	// Use rotating API key if available
-	const effectiveApiKey = apiKey || config.getRotatingApiKey() || "sk-";
+	const effectiveApiKey = apiKey || (await config.getRotatingApiKey()) || "sk-";
 
 	const openai = new OpenAI({
 		apiKey: effectiveApiKey,

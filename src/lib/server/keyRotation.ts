@@ -8,7 +8,7 @@ const HF_API_KEYS = [
 	process.env.HF_KEY_4 || "",
 	process.env.HF_KEY_5 || "",
 	process.env.HF_KEY_6 || "",
-].filter(key => key.length > 0);
+].filter((key) => key.length > 0);
 
 // Track current key index and failed keys
 let currentKeyIndex = 0;
@@ -42,7 +42,7 @@ export class KeyRotationManager {
 				logger.info(`Using HF API Key ${currentKeyIndex + 1}/${HF_API_KEYS.length}`);
 				return key;
 			}
-			
+
 			// Move to next key
 			currentKeyIndex = (currentKeyIndex + 1) % HF_API_KEYS.length;
 			attempts++;
@@ -56,29 +56,33 @@ export class KeyRotationManager {
 		return HF_API_KEYS[0];
 	}
 
-	static markCurrentKeyAsFailed(error?: any): void {
+	static markCurrentKeyAsFailed(error?: unknown): void {
 		const isRateLimit = this.isRateLimitError(error);
-		
+
 		if (isRateLimit) {
 			failedKeys.add(currentKeyIndex);
 			keyRetryTime.set(currentKeyIndex, Date.now());
-			
-			logger.warn(`Key ${currentKeyIndex + 1} hit rate limit, marking as failed. Available keys: ${HF_API_KEYS.length - failedKeys.size}/${HF_API_KEYS.length}`);
-			
+
+			logger.warn(
+				`Key ${currentKeyIndex + 1} hit rate limit, marking as failed. Available keys: ${HF_API_KEYS.length - failedKeys.size}/${HF_API_KEYS.length}`
+			);
+
 			// Move to next key
 			const oldIndex = currentKeyIndex;
 			currentKeyIndex = (currentKeyIndex + 1) % HF_API_KEYS.length;
-			
+
 			logger.info(`Rotating from key ${oldIndex + 1} to key ${currentKeyIndex + 1}`);
 		}
 	}
 
-	static isRateLimitError(error: any): boolean {
+	static isRateLimitError(error: unknown): boolean {
 		if (!error) return false;
-		
+
 		const errorStr = String(error).toLowerCase();
-		const statusCode = error?.status || error?.response?.status;
-		
+		const errorObj = error as Record<string, unknown>;
+		const responseObj = errorObj?.response as Record<string, unknown> | undefined;
+		const statusCode = errorObj?.status || responseObj?.status;
+
 		// Check for rate limit indicators
 		return (
 			statusCode === 429 ||
@@ -94,7 +98,7 @@ export class KeyRotationManager {
 		return {
 			totalKeys: HF_API_KEYS.length,
 			currentKey: currentKeyIndex + 1,
-			failedKeys: Array.from(failedKeys).map(i => i + 1),
+			failedKeys: Array.from(failedKeys).map((i) => i + 1),
 			availableKeys: HF_API_KEYS.length - failedKeys.size,
 			nextRetryTime: Math.min(...Array.from(keyRetryTime.values())) + RETRY_AFTER_MS,
 		};
