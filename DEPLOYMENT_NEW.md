@@ -18,15 +18,21 @@ The Chat-UI repository has been successfully imported and is ready for deploymen
    - Select your GitHub repository
    - Vercel will auto-detect it as a SvelteKit project
 
-3. **Set Environment Variables**:
+3. **Set Environment Variables** (CRITICAL!):
    In Vercel dashboard → Settings → Environment Variables, add:
 
-   **Required:**
+   **⚠️ REQUIRED - App will crash without these:**
    ```
-   MONGODB_URL=mongodb+srv://username:password@cluster.mongodb.net/chat-ui
+   MONGODB_URL=mongodb+srv://username:password@cluster.mongodb.net/chat-ui?retryWrites=true&w=majority
    OPENAI_BASE_URL=https://router.huggingface.co/v1
    OPENAI_API_KEY=hf_your_token_here
+   ```
+
+   **Optional but recommended:**
+   ```
    PUBLIC_ORIGIN=https://your-app-name.vercel.app
+   MONGODB_DB_NAME=chat-ui
+   PUBLIC_APP_NAME=My Chat UI
    ```
 
 4. **Deploy**: Click "Deploy" - Vercel will handle the rest!
@@ -64,6 +70,29 @@ Copy `.env.example` to `.env.local` and configure:
 | `OPENAI_BASE_URL` | AI API endpoint | `https://router.huggingface.co/v1` |
 | `OPENAI_API_KEY` | AI API key | `hf_...` or `sk-...` |
 | `PUBLIC_ORIGIN` | Your app's URL | `https://my-chat.vercel.app` |
+
+## 🔧 Troubleshooting
+
+### "ENOENT: no such file or directory, mkdir" Error
+
+**Problem**: App crashes with directory creation error
+
+**Solution**: 
+1. **Set MONGODB_URL** - The app requires a real MongoDB database on Vercel
+2. **Cannot use in-memory database** on serverless platforms
+3. **Get MongoDB Atlas free tier**: [mongodb.com/atlas](https://mongodb.com/atlas)
+
+### "No MongoDB URL found, using in-memory server" Warning
+
+**Problem**: Missing MONGODB_URL environment variable
+
+**Solution**: Add `MONGODB_URL` in Vercel → Settings → Environment Variables
+
+### Function timeout or crashes
+
+**Problem**: Missing required API keys
+
+**Solution**: Ensure both `MONGODB_URL` and `OPENAI_API_KEY` are set
 
 ---
 
