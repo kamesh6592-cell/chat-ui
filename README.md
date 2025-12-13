@@ -17,6 +17,12 @@ A chat interface for LLMs. It is a SvelteKit app and it powers the [HuggingChat 
 > [!NOTE]
 > The old version is still available on the [legacy branch](https://github.com/huggingface/chat-ui/tree/legacy)
 
+## 🚨 Having Deployment Issues?
+
+If you're getting MongoDB authentication errors or deployment failures:
+- **Quick Fix**: See [MONGODB_FIX.md](./MONGODB_FIX.md) for immediate MongoDB authentication solutions
+- **Complete Guide**: Follow [VERCEL_DEPLOYMENT_GUIDE.md](./VERCEL_DEPLOYMENT_GUIDE.md) for step-by-step Vercel deployment
+
 ## Quickstart
 
 Chat UI speaks to OpenAI-compatible APIs only. The fastest way to get running is with the Hugging Face Inference Providers router plus your personal Hugging Face access token.

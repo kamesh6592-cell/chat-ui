@@ -60,19 +60,49 @@ export class Database {
 				directConnection: config.MONGODB_DIRECT_CONNECTION === "true",
 			});
 		} else {
+			// Validate MongoDB URL format
+			if (!config.MONGODB_URL.startsWith('mongodb://') && !config.MONGODB_URL.startsWith('mongodb+srv://')) {
+				logger.error("Invalid MONGODB_URL format. Must start with 'mongodb://' or 'mongodb+srv://'");
+				logger.error("Current MONGODB_URL:", config.MONGODB_URL);
+				process.exit(1);
+			}
+			
 			this.client = new MongoClient(config.MONGODB_URL, {
 				directConnection: config.MONGODB_DIRECT_CONNECTION === "true",
+				serverSelectionTimeoutMS: 10000, // 10 second timeout
+				socketTimeoutMS: 45000, // 45 second socket timeout
 			});
 		}
 
 		try {
 			logger.info("Connecting to database");
 			await this.client.connect();
-			logger.info("Connected to database");
-			this.client.db(config.MONGODB_DB_NAME + (import.meta.env.MODE === "test" ? "-test" : ""));
+			logger.info("Connected to database successfully");
+			
+			// Test database access
+			const db = this.client.db(config.MONGODB_DB_NAME + (import.meta.env.MODE === "test" ? "-test" : ""));
+			await db.admin().ping();
+			logger.info("Database ping successful");
+			
 			await this.initDatabase();
-		} catch (err) {
-			logger.error(err, "Connection error");
+		} catch (err: any) {
+			logger.error("Database connection failed:");
+			
+			if (err.code === 8000 && err.codeName === "AtlasError") {
+				logger.error("MongoDB Atlas Authentication Failed:");
+				logger.error("- Check your username and password in MONGODB_URL");
+				logger.error("- Verify database user has correct permissions");
+				logger.error("- Ensure network access allows your deployment IP");
+			} else if (err.name === "MongoServerSelectionError") {
+				logger.error("Cannot reach MongoDB server:");
+				logger.error("- Check if MongoDB server is running");
+				logger.error("- Verify connection string is correct");
+				logger.error("- Check network connectivity");
+			} else {
+				logger.error("General connection error:", err.message);
+			}
+			
+			logger.error("Full error details:", err);
 			process.exit(1);
 		}
 
